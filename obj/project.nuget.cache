@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "hq9/Bshj2KM=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Helge\\OneDrive - Cebu Institute of Technology University\\Desktop\\School\\College\\3rd Year\\1st Semester\\Applications Development and Emerging Technologies\\appdev\\AppDev.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Helge\\.nuget\\packages\\microsoft.aspnetcore.app.internal.assets\\10.0.12\\microsoft.aspnetcore.app.internal.assets.10.0.12.nupkg.sha512"
+  ],
+  "logs": []
+}

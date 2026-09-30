@@ -1,0 +1,336 @@
+﻿@page "/"
+@using System.Globalization
+
+<PageTitle>CampusFix | @PageTitleText</PageTitle>
+
+<div class="app-shell @(darkMode ? "dark-mode" : string.Empty)">
+	<header class="site-header">
+		<a class="brand" href="/" @onclick="ShowDashboard" @onclick:preventDefault>
+			<span class="brand-mark">CF</span>
+			<span class="brand-copy"><strong>CampusFix</strong><small>CIT-University Maintenance Portal</small></span>
+		</a>
+		<nav class="top-nav" aria-label="Main navigation">
+			@if (signedIn)
+			{
+				<button class="nav-link" @onclick="ShowDashboard">Dashboard</button>
+				<button class="nav-link" @onclick="ShowTickets">Tickets</button>
+				<button class="nav-link" @onclick="ShowNotifications">Notifications <span class="nav-count">@UnreadCount</span></button>
+				<button class="nav-link" @onclick="ShowProfile">Profile</button>
+				<button class="nav-link" @onclick="ShowSettings">Settings</button>
+				<button class="button button-gold button-small" @onclick="CreateNewTicket">＋ New Ticket</button>
+				<button class="nav-link" @onclick="Logout">Log out</button>
+			}
+			else
+			{
+				<button class="nav-link" @onclick="ShowLogin">Sign in</button>
+				<button class="button button-gold button-small" @onclick="ShowRegister">Create account</button>
+			}
+		</nav>
+	</header>
+
+	<main class="main-content">
+		@if (notice.Length > 0)
+		{
+			<div class="toast-message" role="status">@notice</div>
+		}
+
+		@if (currentView == "dashboard")
+		{
+			<section class="dashboard page-surface">
+				<div class="dashboard-banner">
+					<p class="eyebrow">Cebu Institute of Technology - University</p>
+					<h1>Dashboard</h1>
+					<p class="welcome-line">Welcome back, <strong>@userName</strong> <span>(Student)</span></p>
+					<p class="banner-summary">CampusFix — the maintenance and repair request portal for the CIT-U community.</p>
+				</div>
+				<div class="dashboard-body">
+					<div class="stats-grid">
+						<article class="stat-card stat-total"><div class="stat-label"><span class="stat-icon">▤</span> My Tickets</div><strong class="stat-number">@Tickets.Count</strong><button class="text-action" @onclick="ShowTickets">View all tickets <span>→</span></button></article>
+						<article class="stat-card stat-open"><div class="stat-label"><span class="stat-icon">◷</span> Open</div><strong class="stat-number">@Tickets.Count(t => t.Status == "Open")</strong><span class="stat-caption">Awaiting assignment</span></article>
+						<article class="stat-card stat-progress"><div class="stat-label"><span class="stat-icon">⚙</span> In progress</div><strong class="stat-number">@Tickets.Count(t => t.Status == "In Progress")</strong><span class="stat-caption">Being worked on</span></article>
+						<article class="stat-card stat-resolved"><div class="stat-label"><span class="stat-icon">✓</span> Resolved</div><strong class="stat-number">@Tickets.Count(t => t.Status == "Resolved")</strong><span class="stat-caption">Completed repairs</span></article>
+					</div>
+					<div class="section-heading"><div><p class="eyebrow">Get things moving</p><h2>Quick actions</h2></div><button class="text-action" @onclick="ShowTickets">Recent requests <span>→</span></button></div>
+					<div class="quick-actions">
+						<button class="action-tile action-primary" @onclick="CreateNewTicket"><span class="tile-icon">＋</span><span><strong>Submit a repair request</strong><small>Tell facilities what needs attention</small></span><span class="tile-arrow">→</span></button>
+						<button class="action-tile" @onclick="ShowTickets"><span class="tile-icon">▤</span><span><strong>View my tickets</strong><small>Follow the status of your requests</small></span><span class="tile-arrow">→</span></button>
+						<button class="action-tile" @onclick="ShowNotifications"><span class="tile-icon">♧</span><span><strong>Notifications</strong><small>@UnreadCount unread updates</small></span><span class="tile-arrow">→</span></button>
+					</div>
+					<div class="recent-heading"><h2>Recent tickets</h2><button class="text-action" @onclick="ShowTickets">See all <span>→</span></button></div>
+					<div class="recent-list">
+						@foreach (var ticket in Tickets.Take(3))
+						{
+							<button class="recent-ticket" @onclick="() => OpenTicket(ticket.Id)">
+								<span class="recent-ticket-copy"><strong>@ticket.Title</strong><small>@ticket.Category · @ticket.Building / @ticket.Room</small></span>
+								<span class="status-badge status-@CssToken(ticket.Status)">@ticket.Status</span>
+							</button>
+						}
+					</div>
+				</div>
+			</section>
+		}
+		else if (currentView == "login")
+		{
+			<section class="auth-card">
+				<div class="auth-banner"><span class="auth-badge">CIT-University</span><h1>CampusFix</h1><p>Maintenance &amp; Repair Request System</p></div>
+				<div class="auth-body">
+					<form @onsubmit="Login" @onsubmit:preventDefault>
+						<div class="form-group"><label for="school-id">School ID Number</label><input id="school-id" @bind="schoolId" placeholder="Enter your School ID (e.g. 20-1234-567)" required /></div>
+						<div class="form-group"><label for="password">Password</label><input id="password" type="password" @bind="password" placeholder="Enter your password" required /></div>
+						<button class="button button-maroon button-full" type="submit">Sign in</button>
+					</form>
+					<p class="auth-prompt">Need an account? <button class="inline-link" @onclick="ShowRegister">Register here</button></p>
+					<p class="demo-note">Demo UI: enter any school ID and password to continue.</p>
+				</div>
+			</section>
+		}
+		else if (currentView == "register")
+		{
+			<section class="auth-card">
+				<div class="auth-banner"><span class="auth-badge">New User Registration</span><h1>Create account</h1><p>Join CIT-U CampusFix Maintenance Portal</p></div>
+				<div class="auth-body">
+					<button class="back-link" @onclick="ShowLogin">← Back to sign in</button>
+					<form @onsubmit="Register" @onsubmit:preventDefault>
+						<div class="form-group"><label for="register-name">Full name</label><input id="register-name" @bind="registerName" placeholder="e.g., Juan Dela Cruz" required /></div>
+						<div class="form-group"><label for="register-email">CIT-U institutional email</label><input id="register-email" type="email" @bind="registerEmail" placeholder="e.g., juan.delacruz@cit.edu" required /></div>
+						<div class="form-group"><label for="register-id">School ID Number</label><input id="register-id" @bind="registerSchoolId" placeholder="e.g., 20-1234-567" required /></div>
+						<div class="form-row"><div class="form-group"><label for="register-role">Role</label><select id="register-role" @bind="registerRole"><option>Student</option><option>Faculty</option><option>Staff</option></select></div><div class="form-group"><label for="register-password">Password</label><input id="register-password" type="password" @bind="registerPassword" required /></div></div>
+						<button class="button button-maroon button-full" type="submit">Create account</button>
+					</form>
+				</div>
+			</section>
+		}
+		else if (currentView == "tickets")
+		{
+			<section class="tickets-page">
+				<div class="page-heading"><div><p class="eyebrow">Requests and repairs</p><h1>My tickets</h1><p class="page-subtitle">Track maintenance requests submitted to campus facilities.</p></div><button class="button button-maroon" @onclick="CreateNewTicket">＋ Submit new ticket</button></div>
+				<div class="toolbar"><label class="search-box"><span>⌕</span><input aria-label="Search tickets" @bind="ticketSearch" @bind:event="oninput" placeholder="Search tickets" /></label><label class="filter-box"><span>Status</span><select @bind="statusFilter"><option>All statuses</option><option>Open</option><option>In Progress</option><option>On Hold</option><option>Resolved</option><option>Closed</option></select></label><span class="result-count">@FilteredTickets.Count() requests</span></div>
+				@if (FilteredTickets.Any())
+				{
+					<div class="table-wrap"><table class="ticket-table"><thead><tr><th>Request</th><th>Category</th><th>Location</th><th>Priority</th><th>Status</th><th>Submitted</th></tr></thead><tbody>
+					@foreach (var ticket in FilteredTickets)
+					{
+						<tr><td><button class="ticket-title" @onclick="() => OpenTicket(ticket.Id)">@ticket.Title</button><small class="mobile-meta">@ticket.Category · @ticket.Submitted.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</small></td><td>@ticket.Category</td><td>@ticket.Building / @ticket.Room</td><td><span class="priority-badge priority-@CssToken(ticket.Priority)">@ticket.Priority</span></td><td><span class="status-badge status-@CssToken(ticket.Status)">@ticket.Status</span></td><td>@ticket.Submitted.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</td></tr>
+					}
+					</tbody></table></div>
+				}
+				else
+				{
+					<div class="empty-state"><span class="empty-icon">▤</span><h2>No matching tickets</h2><p>Try another search or create a new repair request.</p><button class="button button-maroon" @onclick="CreateNewTicket">Submit a ticket</button></div>
+				}
+			</section>
+		}
+		else if (currentView == "create")
+		{
+			<section class="tickets-page narrow-page">
+				<div class="page-heading"><div><p class="eyebrow">Facilities request</p><h1>Submit repair request</h1><p class="page-subtitle">Share the details so the right team can follow up.</p></div></div>
+				<form class="form-card" @onsubmit="CreateTicket" @onsubmit:preventDefault>
+					<h2 class="form-section-title">Ticket details</h2>
+					<div class="form-group"><label for="ticket-title">Title <span class="required">*</span></label><input id="ticket-title" @bind="newTitle" maxlength="100" placeholder="e.g. Air conditioning not working in Room 301" required /></div>
+					<div class="form-group"><label for="ticket-description">Description <span class="required">*</span></label><textarea id="ticket-description" rows="4" @bind="newDescription" placeholder="Describe the issue in detail…" required></textarea></div>
+					<div class="form-row"><div class="form-group"><label for="ticket-category">Category <span class="required">*</span></label><select id="ticket-category" @bind="newCategory"><option>Electrical</option><option>Plumbing</option><option>Air Conditioning</option><option>Furniture</option><option>Cleaning</option><option>Other</option></select></div><div class="form-group"><label for="ticket-priority">Priority</label><select id="ticket-priority" @bind="newPriority"><option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option></select></div></div>
+					<h2 class="form-section-title">Location</h2>
+					<div class="form-row"><div class="form-group"><label for="ticket-building">Building <span class="required">*</span></label><select id="ticket-building" @bind="newBuilding"><option>Main Building</option><option>Engineering Building</option><option>Library</option><option>Student Center</option></select></div><div class="form-group"><label for="ticket-room">Room <span class="required">*</span></label><input id="ticket-room" @bind="newRoom" placeholder="Room number or area" required /></div></div>
+					<div class="form-actions"><button type="button" class="button button-outline" @onclick="ShowTickets">Cancel</button><button type="submit" class="button button-maroon">Submit ticket <span>→</span></button></div>
+				</form>
+			</section>
+		}
+		else if (currentView == "detail" && SelectedTicket is { } ticketDetail)
+		{
+			<section class="tickets-page">
+				<button class="back-link page-back" @onclick="ShowTickets">← All tickets</button>
+				<div class="page-heading detail-heading"><div><p class="eyebrow">Request #CF-@ticketDetail.Id.ToString("0000")</p><h1>@ticketDetail.Title</h1><div class="badge-row"><span class="status-badge status-@CssToken(ticketDetail.Status)">@ticketDetail.Status</span><span class="priority-badge priority-@CssToken(ticketDetail.Priority)">@ticketDetail.Priority priority</span><span class="detail-date">Submitted @ticketDetail.Submitted.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)</span></div></div><button class="button button-outline" @onclick="CreateNewTicket">＋ New ticket</button></div>
+				<div class="detail-grid">
+					<div class="detail-main">
+						<article class="content-card"><h2>Ticket details</h2><div class="meta-grid"><div><span>Reporter</span><strong>@userName</strong></div><div><span>Assigned to</span><strong>@ticketDetail.Assigned</strong></div><div><span>Category</span><strong>@ticketDetail.Category</strong></div><div><span>Location</span><strong>@ticketDetail.Building / @ticketDetail.Room</strong></div><div><span>Created</span><strong>@ticketDetail.Submitted.ToString("MMM d, yyyy · h:mm tt", CultureInfo.InvariantCulture)</strong></div><div><span>Last updated</span><strong>@DateTime.Now.ToString("MMM d, yyyy · h:mm tt", CultureInfo.InvariantCulture)</strong></div></div><div class="description-block"><span>Description</span><p>@ticketDetail.Description</p></div></article>
+						<article class="content-card"><h2>Status history</h2><div class="timeline"><div class="timeline-entry"><span class="timeline-dot"></span><div><small>@ticketDetail.Submitted.ToString("MMM d, yyyy · h:mm tt", CultureInfo.InvariantCulture) · @userName</small><p>Ticket opened as <span class="status-badge status-@CssToken(ticketDetail.Status)">@ticketDetail.Status</span></p></div></div></div></article>
+						<article class="content-card"><h2>Comments <span class="subtle-count">@ticketDetail.Comments.Count</span></h2>
+							@if (ticketDetail.Comments.Count == 0) { <p class="muted-copy">No comments yet. Be the first to comment.</p> }
+							@foreach (var comment in ticketDetail.Comments) { <div class="comment-bubble"><strong>@comment.Author <small>@comment.Created.ToString("MMM d, h:mm tt", CultureInfo.InvariantCulture)</small></strong><p>@comment.Body</p></div> }
+							<form class="comment-form" @onsubmit="() => AddComment(ticketDetail)" @onsubmit:preventDefault><div class="form-group"><label for="comment-text">Add a comment</label><textarea id="comment-text" rows="3" @bind="commentText" placeholder="Write your comment here…"></textarea></div><button class="button button-maroon button-small" type="submit">Post comment</button></form>
+						</article>
+					</div>
+					<aside class="detail-side"><section class="side-panel"><h2>Update status</h2><div class="form-group"><label for="new-status">New status</label><select id="new-status" @bind="ticketDetail.Status"><option>Open</option><option>In Progress</option><option>On Hold</option><option>Resolved</option><option>Closed</option></select></div><button class="button button-maroon button-full" @onclick="() => SaveStatus(ticketDetail)">Save update</button><p class="demo-note">Status changes are kept in this demo session.</p></section><section class="side-panel quick-info"><h2>Quick info</h2><div><span>Ticket ID</span><strong>CF-@ticketDetail.Id.ToString("0000")</strong></div><div><span>Status</span><span class="status-badge status-@CssToken(ticketDetail.Status)">@ticketDetail.Status</span></div><div><span>Priority</span><span class="priority-badge priority-@CssToken(ticketDetail.Priority)">@ticketDetail.Priority</span></div></section></aside>
+				</div>
+			</section>
+		}
+		else if (currentView == "notifications")
+		{
+			<section class="tickets-page narrow-page"><div class="page-heading"><div><p class="eyebrow">Stay in the loop</p><h1>Notifications <span class="heading-count">@UnreadCount unread</span></h1></div>@if (UnreadCount > 0) { <button class="button button-outline" @onclick="MarkAllRead">Mark all read</button> }</div>
+				@if (Notifications.Count == 0) { <div class="empty-state"><span class="empty-icon">♧</span><h2>You're all caught up</h2><p>Updates about your maintenance requests will appear here.</p><button class="button button-maroon" @onclick="ShowTickets">Go to tickets</button></div> }
+				else { <div class="notification-list">@foreach (var item in Notifications) { <article class="notification-item @(item.IsRead ? string.Empty : "unread")"><span class="notification-icon">@(item.IsRead ? "○" : "●")</span><div class="notification-copy"><strong>@item.Message</strong><small>@item.Created.ToString("MMM d, yyyy · h:mm tt", CultureInfo.InvariantCulture)</small><button class="inline-link" @onclick="() => OpenTicket(item.TicketId)">View ticket →</button></div>@if (!item.IsRead) { <button class="button button-outline button-small" @onclick="() => MarkRead(item)">Mark read</button> }</article> }</div> }
+			</section>
+		}
+		else if (currentView == "profile")
+		{
+			<section class="profile-card"><div class="profile-banner"><span class="auth-badge">My account</span><h1>Profile</h1><p>Update how you appear across CampusFix.</p></div><div class="profile-body"><div class="avatar">@Initials</div><form @onsubmit="SaveProfile" @onsubmit:preventDefault><div class="form-group"><label for="profile-name">Full name</label><input id="profile-name" @bind="profileName" placeholder="e.g., Juan Dela Cruz" required /></div><div class="form-group"><label for="profile-bio">Bio</label><textarea id="profile-bio" rows="4" @bind="profileBio" placeholder="Tell us a bit about yourself"></textarea></div><div class="form-group"><label for="profile-email">Institutional email</label><input id="profile-email" type="email" @bind="profileEmail" /></div><button class="button button-maroon button-full" type="submit">Save profile</button></form></div></section>
+		}
+		else if (currentView == "settings")
+		{
+			<section class="settings-card"><div class="profile-banner"><span class="auth-badge">Preferences</span><h1>Settings</h1><p>Control how CampusFix looks and notifies you.</p></div><div class="profile-body"><div class="setting-row"><div><strong>Dark mode</strong><p>Use a darker color theme across the app.</p></div><input aria-label="Dark mode" type="checkbox" @bind="darkMode" /></div><div class="setting-row"><div><strong>Email notifications</strong><p>Receive updates about your maintenance requests.</p></div><input aria-label="Email notifications" type="checkbox" @bind="emailNotifications" /></div><button class="button button-maroon button-full settings-save" @onclick="SaveSettings">Save settings</button></div></section>
+		}
+	</main>
+
+	<footer class="site-footer">© 2026 <strong>Cebu Institute of Technology - University</strong>. CampusFix Maintenance &amp; Repair Request System.</footer>
+</div>
+
+@code {
+	private string currentView = "dashboard";
+	private string userName = "Alex Rivera";
+	private string profileName = "Alex Rivera";
+	private string profileBio = "CIT-U student";
+	private string profileEmail = "alex.rivera@cit.edu";
+	private string schoolId = string.Empty;
+	private string password = string.Empty;
+	private string registerName = string.Empty;
+	private string registerEmail = string.Empty;
+	private string registerSchoolId = string.Empty;
+	private string registerPassword = string.Empty;
+	private string registerRole = "Student";
+	private string ticketSearch = string.Empty;
+	private string statusFilter = "All statuses";
+	private string newTitle = string.Empty;
+	private string newDescription = string.Empty;
+	private string newCategory = "Electrical";
+	private string newPriority = "Medium";
+	private string newBuilding = "Main Building";
+	private string newRoom = string.Empty;
+	private string commentText = string.Empty;
+	private string notice = string.Empty;
+	private bool signedIn = true;
+	private bool darkMode;
+	private bool emailNotifications = true;
+	private int selectedTicketId = 1001;
+
+	private List<TicketItem> Tickets { get; } = new()
+	{
+		new() { Id = 1001, Title = "Air conditioning not cooling", Category = "Air Conditioning", Building = "Main Building", Room = "Room 301", Priority = "High", Status = "In Progress", Assigned = "Facilities Team", Submitted = DateTime.Today.AddDays(-2), Description = "The air conditioning unit is running, but the room stays warm during afternoon classes." },
+		new() { Id = 1002, Title = "Leaking faucet in washroom", Category = "Plumbing", Building = "Engineering Building", Room = "Room 112", Priority = "Medium", Status = "Open", Assigned = "Unassigned", Submitted = DateTime.Today.AddDays(-1), Description = "The faucet continues to drip after it has been turned off." },
+		new() { Id = 1003, Title = "Flickering lights near the library", Category = "Electrical", Building = "Library", Room = "Second floor", Priority = "Low", Status = "Resolved", Assigned = "Facilities Team", Submitted = DateTime.Today.AddDays(-6), Description = "Two lights near the study area were flickering. The issue has been fixed." },
+		new() { Id = 1004, Title = "Broken chair in lecture room", Category = "Furniture", Building = "Main Building", Room = "Room 204", Priority = "Medium", Status = "Open", Assigned = "Unassigned", Submitted = DateTime.Today.AddHours(-5), Description = "One of the chairs has a loose leg and should be checked before the next class." }
+	};
+
+	private List<NotificationItem> Notifications { get; } = new()
+	{
+		new() { Message = "Your air conditioning request is now in progress.", TicketId = 1001, Created = DateTime.Now.AddHours(-2) },
+		new() { Message = "Your lighting request has been resolved.", TicketId = 1003, Created = DateTime.Now.AddDays(-1), IsRead = true }
+	};
+
+	private string PageTitleText => currentView switch { "login" => "Sign in", "register" => "Create account", "tickets" => "My tickets", "create" => "Submit request", "detail" => "Ticket details", "notifications" => "Notifications", "profile" => "Profile", "settings" => "Settings", _ => "Dashboard" };
+	private int UnreadCount => Notifications.Count(item => !item.IsRead);
+	private string Initials => string.Join(string.Empty, userName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(part => part[0])).ToUpperInvariant();
+	private TicketItem? SelectedTicket => Tickets.FirstOrDefault(ticket => ticket.Id == selectedTicketId);
+	private IEnumerable<TicketItem> FilteredTickets => Tickets.Where(ticket => (statusFilter == "All statuses" || ticket.Status == statusFilter) && (string.IsNullOrWhiteSpace(ticketSearch) || $"{ticket.Title} {ticket.Category} {ticket.Building} {ticket.Room}".Contains(ticketSearch, StringComparison.OrdinalIgnoreCase))).OrderByDescending(ticket => ticket.Submitted);
+
+	private static string CssToken(string value) => value.ToLowerInvariant().Replace(' ', '-');
+	private void ShowDashboard() => currentView = "dashboard";
+	private void ShowLogin() { currentView = "login"; signedIn = false; }
+	private void ShowRegister() => currentView = "register";
+	private void ShowTickets() => currentView = "tickets";
+	private void ShowNotifications() => currentView = "notifications";
+	private void ShowProfile() { profileName = userName; currentView = "profile"; }
+	private void ShowSettings() => currentView = "settings";
+	private void CreateNewTicket() { ClearTicketForm(); currentView = "create"; }
+	private void OpenTicket(int id) { selectedTicketId = id; currentView = "detail"; commentText = string.Empty; }
+
+	private void Login()
+	{
+		signedIn = true;
+		currentView = "dashboard";
+		notice = "Signed in to the CampusFix demo.";
+	}
+
+	private void Register()
+	{
+		userName = string.IsNullOrWhiteSpace(registerName) ? "Alex Rivera" : registerName;
+		profileName = userName;
+		profileEmail = registerEmail;
+		signedIn = true;
+		currentView = "dashboard";
+		notice = $"Welcome to CampusFix, {userName}. Your demo account is ready.";
+	}
+
+	private void Logout()
+	{
+		signedIn = false;
+		currentView = "login";
+		notice = string.Empty;
+	}
+
+	private void CreateTicket()
+	{
+		var nextId = Tickets.Count == 0 ? 1001 : Tickets.Max(ticket => ticket.Id) + 1;
+		Tickets.Add(new TicketItem { Id = nextId, Title = newTitle.Trim(), Description = newDescription.Trim(), Category = newCategory, Priority = newPriority, Building = newBuilding, Room = newRoom.Trim(), Status = "Open", Assigned = "Unassigned", Submitted = DateTime.Now });
+		Notifications.Insert(0, new NotificationItem { Message = $"Your request '{newTitle.Trim()}' was submitted.", TicketId = nextId, Created = DateTime.Now });
+		ClearTicketForm();
+		selectedTicketId = nextId;
+		currentView = "detail";
+		notice = "Repair request submitted.";
+	}
+
+	private void ClearTicketForm()
+	{
+		newTitle = string.Empty;
+		newDescription = string.Empty;
+		newCategory = "Electrical";
+		newPriority = "Medium";
+		newBuilding = "Main Building";
+		newRoom = string.Empty;
+	}
+
+	private void AddComment(TicketItem ticket)
+	{
+		if (string.IsNullOrWhiteSpace(commentText)) return;
+		ticket.Comments.Add(new CommentItem { Author = userName, Body = commentText.Trim(), Created = DateTime.Now });
+		commentText = string.Empty;
+		notice = "Comment posted.";
+	}
+
+	private void SaveStatus(TicketItem ticket)
+	{
+		ticket.Assigned = "Facilities Team";
+		Notifications.Insert(0, new NotificationItem { Message = $"The status of '{ticket.Title}' was updated to {ticket.Status}.", TicketId = ticket.Id, Created = DateTime.Now });
+		notice = "Ticket status updated.";
+	}
+
+	private void MarkRead(NotificationItem item) => item.IsRead = true;
+	private void MarkAllRead() { foreach (var item in Notifications) item.IsRead = true; }
+
+	private void SaveProfile()
+	{
+		userName = profileName.Trim();
+		notice = "Profile saved.";
+	}
+
+	private void SaveSettings() => notice = "Settings saved for this demo session.";
+
+	private sealed class TicketItem
+	{
+		public int Id { get; set; }
+		public string Title { get; set; } = string.Empty;
+		public string Category { get; set; } = string.Empty;
+		public string Building { get; set; } = string.Empty;
+		public string Room { get; set; } = string.Empty;
+		public string Priority { get; set; } = "Medium";
+		public string Status { get; set; } = "Open";
+		public string Assigned { get; set; } = "Unassigned";
+		public string Description { get; set; } = string.Empty;
+		public DateTime Submitted { get; set; }
+		public List<CommentItem> Comments { get; } = new();
+	}
+
+	private sealed class CommentItem
+	{
+		public string Author { get; set; } = string.Empty;
+		public string Body { get; set; } = string.Empty;
+		public DateTime Created { get; set; }
+	}
+
+	private sealed class NotificationItem
+	{
+		public string Message { get; set; } = string.Empty;
+		public int TicketId { get; set; }
+		public DateTime Created { get; set; }
+		public bool IsRead { get; set; }
+	}
+}
