@@ -17,6 +17,13 @@ Open the local URL printed by `dotnet run`.
 During UI development, run `npm run watch:css` in a separate terminal so Tailwind
 rebuilds `wwwroot/tailwind.css` as Razor markup changes.
 
+## Initial data models
+
+The initial CampusFix entities and their relationships are documented in
+[the class diagram](docs/class-diagram.md) and implemented under `Models/`.
+The demo continues to keep its data in memory; database persistence is not yet
+configured.
+
 ## Demo behavior
 
 The dashboard, sign-in and registration screens, ticket list/create/detail flow, comments, status updates, notifications, profile, preferences, and searchable Help Center are interactive. Sample tickets and changes are stored in memory and reset when the app restarts. There is no database, authentication provider, Supabase, or custom JavaScript. The shared app shell and Help Center use Tailwind CSS (`Styles/tailwind.input.css` compiled to `wwwroot/tailwind.css`); existing page-specific styles remain in `wwwroot/campusfix.css`.
