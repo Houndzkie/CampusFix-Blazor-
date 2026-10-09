@@ -148,7 +148,7 @@
 						<article class="content-card"><h2>Status history</h2><div class="timeline"><div class="timeline-entry"><span class="timeline-dot"></span><div><small>@ticketDetail.Submitted.ToString("MMM d, yyyy · h:mm tt", CultureInfo.InvariantCulture) · @userName</small><p>Ticket opened as <span class="status-badge status-@CssToken(ticketDetail.Status)">@ticketDetail.Status</span></p></div></div></div></article>
 						<article class="content-card"><h2>Comments <span class="subtle-count">@ticketDetail.Comments.Count</span></h2>
 							@if (ticketDetail.Comments.Count == 0) { <p class="muted-copy">No comments yet. Be the first to comment.</p> }
-							@foreach (var comment in ticketDetail.Comments) { <div class="comment-bubble"><strong>@comment.Author <small>@comment.Created.ToString("MMM d, h:mm tt", CultureInfo.InvariantCulture)</small></strong><p>@comment.Body</p></div> }
+							@foreach (var comment in ticketDetail.Comments) { <div class="comment-bubble"><strong>@comment.AuthorName <small>@comment.Created.ToString("MMM d, h:mm tt", CultureInfo.InvariantCulture)</small></strong><p>@comment.Body</p></div> }
 							<form class="comment-form" @onsubmit="() => AddComment(ticketDetail)" @onsubmit:preventDefault><div class="form-group"><label for="comment-text">Add a comment</label><textarea id="comment-text" rows="3" @bind="commentText" placeholder="Write your comment here…"></textarea></div><button class="button button-maroon button-small" type="submit">Post comment</button></form>
 						</article>
 					</div>
@@ -261,25 +261,25 @@
 	private bool emailNotifications = true;
 	private int selectedTicketId = 1001;
 
-	private List<TicketItem> Tickets { get; } = new()
+	private List<MaintenanceTicket> Tickets { get; } = new()
 	{
-		new() { Id = 1001, Title = "Air conditioning not cooling", Category = "Air Conditioning", Building = "Main Building", Room = "Room 301", Priority = "High", Status = "In Progress", Assigned = "Facilities Team", Submitted = DateTime.Today.AddDays(-2), Description = "The air conditioning unit is running, but the room stays warm during afternoon classes." },
-		new() { Id = 1002, Title = "Leaking faucet in washroom", Category = "Plumbing", Building = "Engineering Building", Room = "Room 112", Priority = "Medium", Status = "Open", Assigned = "Unassigned", Submitted = DateTime.Today.AddDays(-1), Description = "The faucet continues to drip after it has been turned off." },
-		new() { Id = 1003, Title = "Flickering lights near the library", Category = "Electrical", Building = "Library", Room = "Second floor", Priority = "Low", Status = "Resolved", Assigned = "Facilities Team", Submitted = DateTime.Today.AddDays(-6), Description = "Two lights near the study area were flickering. The issue has been fixed." },
-		new() { Id = 1004, Title = "Broken chair in lecture room", Category = "Furniture", Building = "Main Building", Room = "Room 204", Priority = "Medium", Status = "Open", Assigned = "Unassigned", Submitted = DateTime.Today.AddHours(-5), Description = "One of the chairs has a loose leg and should be checked before the next class." }
+		new() { Id = 1001, ReporterId = 1, Title = "Air conditioning not cooling", Category = "Air Conditioning", Building = "Main Building", Room = "Room 301", Priority = "High", Status = "In Progress", Assigned = "Facilities Team", Submitted = DateTime.Today.AddDays(-2), Description = "The air conditioning unit is running, but the room stays warm during afternoon classes." },
+		new() { Id = 1002, ReporterId = 1, Title = "Leaking faucet in washroom", Category = "Plumbing", Building = "Engineering Building", Room = "Room 112", Priority = "Medium", Status = "Open", Assigned = "Unassigned", Submitted = DateTime.Today.AddDays(-1), Description = "The faucet continues to drip after it has been turned off." },
+		new() { Id = 1003, ReporterId = 1, Title = "Flickering lights near the library", Category = "Electrical", Building = "Library", Room = "Second floor", Priority = "Low", Status = "Resolved", Assigned = "Facilities Team", Submitted = DateTime.Today.AddDays(-6), Description = "Two lights near the study area were flickering. The issue has been fixed." },
+		new() { Id = 1004, ReporterId = 1, Title = "Broken chair in lecture room", Category = "Furniture", Building = "Main Building", Room = "Room 204", Priority = "Medium", Status = "Open", Assigned = "Unassigned", Submitted = DateTime.Today.AddHours(-5), Description = "One of the chairs has a loose leg and should be checked before the next class." }
 	};
 
-	private List<NotificationItem> Notifications { get; } = new()
+	private List<TicketNotification> Notifications { get; } = new()
 	{
-		new() { Message = "Your air conditioning request is now in progress.", TicketId = 1001, Created = DateTime.Now.AddHours(-2) },
-		new() { Message = "Your lighting request has been resolved.", TicketId = 1003, Created = DateTime.Now.AddDays(-1), IsRead = true }
+		new() { Id = 1, RecipientId = 1, Message = "Your air conditioning request is now in progress.", TicketId = 1001, Created = DateTime.Now.AddHours(-2) },
+		new() { Id = 2, RecipientId = 1, Message = "Your lighting request has been resolved.", TicketId = 1003, Created = DateTime.Now.AddDays(-1), IsRead = true }
 	};
 
 	private string PageTitleText => currentView switch { "login" => "Sign in", "register" => "Create account", "tickets" => "My tickets", "create" => "Submit request", "detail" => "Ticket details", "notifications" => "Notifications", "profile" => "Profile", "settings" => "Settings", "help" => "Help Center", _ => "Dashboard" };
 	private int UnreadCount => Notifications.Count(item => !item.IsRead);
 	private string Initials => string.Join(string.Empty, userName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(part => part[0])).ToUpperInvariant();
-	private TicketItem? SelectedTicket => Tickets.FirstOrDefault(ticket => ticket.Id == selectedTicketId);
-	private IEnumerable<TicketItem> FilteredTickets => Tickets.Where(ticket => (statusFilter == "All statuses" || ticket.Status == statusFilter) && (string.IsNullOrWhiteSpace(ticketSearch) || $"{ticket.Title} {ticket.Category} {ticket.Building} {ticket.Room}".Contains(ticketSearch, StringComparison.OrdinalIgnoreCase))).OrderByDescending(ticket => ticket.Submitted);
+	private MaintenanceTicket? SelectedTicket => Tickets.FirstOrDefault(ticket => ticket.Id == selectedTicketId);
+	private IEnumerable<MaintenanceTicket> FilteredTickets => Tickets.Where(ticket => (statusFilter == "All statuses" || ticket.Status == statusFilter) && (string.IsNullOrWhiteSpace(ticketSearch) || $"{ticket.Title} {ticket.Category} {ticket.Building} {ticket.Room}".Contains(ticketSearch, StringComparison.OrdinalIgnoreCase))).OrderByDescending(ticket => ticket.Submitted);
 	private IEnumerable<FaqItem> FilteredFaqs => Faqs.Where(faq => string.IsNullOrWhiteSpace(faqSearch) || $"{faq.Question} {faq.Answer}".Contains(faqSearch, StringComparison.OrdinalIgnoreCase));
 	private List<FaqItem> Faqs { get; } = new()
 	{
@@ -331,8 +331,8 @@
 	private void CreateTicket()
 	{
 		var nextId = Tickets.Count == 0 ? 1001 : Tickets.Max(ticket => ticket.Id) + 1;
-		Tickets.Add(new TicketItem { Id = nextId, Title = newTitle.Trim(), Description = newDescription.Trim(), Category = newCategory, Priority = newPriority, Building = newBuilding, Room = newRoom.Trim(), Status = "Open", Assigned = "Unassigned", Submitted = DateTime.Now });
-		Notifications.Insert(0, new NotificationItem { Message = $"Your request '{newTitle.Trim()}' was submitted.", TicketId = nextId, Created = DateTime.Now });
+		Tickets.Add(new MaintenanceTicket { Id = nextId, ReporterId = 1, Title = newTitle.Trim(), Description = newDescription.Trim(), Category = newCategory, Priority = newPriority, Building = newBuilding, Room = newRoom.Trim(), Status = "Open", Assigned = "Unassigned", Submitted = DateTime.Now });
+		Notifications.Insert(0, new TicketNotification { Id = Notifications.Count == 0 ? 1 : Notifications.Max(item => item.Id) + 1, RecipientId = 1, Message = $"Your request '{newTitle.Trim()}' was submitted.", TicketId = nextId, Created = DateTime.Now });
 		ClearTicketForm();
 		selectedTicketId = nextId;
 		currentView = "detail";
@@ -349,22 +349,22 @@
 		newRoom = string.Empty;
 	}
 
-	private void AddComment(TicketItem ticket)
+	private void AddComment(MaintenanceTicket ticket)
 	{
 		if (string.IsNullOrWhiteSpace(commentText)) return;
-		ticket.Comments.Add(new CommentItem { Author = userName, Body = commentText.Trim(), Created = DateTime.Now });
+		ticket.Comments.Add(new TicketComment { Id = ticket.Comments.Count == 0 ? 1 : ticket.Comments.Max(comment => comment.Id) + 1, TicketId = ticket.Id, AuthorId = 1, AuthorName = userName, Body = commentText.Trim(), Created = DateTime.Now });
 		commentText = string.Empty;
 		notice = "Comment posted.";
 	}
 
-	private void SaveStatus(TicketItem ticket)
+	private void SaveStatus(MaintenanceTicket ticket)
 	{
 		ticket.Assigned = "Facilities Team";
-		Notifications.Insert(0, new NotificationItem { Message = $"The status of '{ticket.Title}' was updated to {ticket.Status}.", TicketId = ticket.Id, Created = DateTime.Now });
+		Notifications.Insert(0, new TicketNotification { Id = Notifications.Count == 0 ? 1 : Notifications.Max(item => item.Id) + 1, RecipientId = 1, Message = $"The status of '{ticket.Title}' was updated to {ticket.Status}.", TicketId = ticket.Id, Created = DateTime.Now });
 		notice = "Ticket status updated.";
 	}
 
-	private void MarkRead(NotificationItem item) => item.IsRead = true;
+	private void MarkRead(TicketNotification item) => item.IsRead = true;
 	private void MarkAllRead() { foreach (var item in Notifications) item.IsRead = true; }
 
 	private void SaveProfile()
@@ -374,36 +374,6 @@
 	}
 
 	private void SaveSettings() => notice = "Settings saved for this demo session.";
-
-	private sealed class TicketItem
-	{
-		public int Id { get; set; }
-		public string Title { get; set; } = string.Empty;
-		public string Category { get; set; } = string.Empty;
-		public string Building { get; set; } = string.Empty;
-		public string Room { get; set; } = string.Empty;
-		public string Priority { get; set; } = "Medium";
-		public string Status { get; set; } = "Open";
-		public string Assigned { get; set; } = "Unassigned";
-		public string Description { get; set; } = string.Empty;
-		public DateTime Submitted { get; set; }
-		public List<CommentItem> Comments { get; } = new();
-	}
-
-	private sealed class CommentItem
-	{
-		public string Author { get; set; } = string.Empty;
-		public string Body { get; set; } = string.Empty;
-		public DateTime Created { get; set; }
-	}
-
-	private sealed class NotificationItem
-	{
-		public string Message { get; set; } = string.Empty;
-		public int TicketId { get; set; }
-		public DateTime Created { get; set; }
-		public bool IsRead { get; set; }
-	}
 
 	private sealed class FaqItem
 	{
